@@ -10,13 +10,18 @@ import {
 import { LinearGradient } from "expo-linear-gradient"
 import { Feather } from "@expo/vector-icons"
 import Text from "@/components/Text"
-import { router } from "expo-router"
+import { Redirect, router } from "expo-router"
 import { responsive } from "@/globals/globals"
+import { useDispatch, useSelector } from "react-redux"
+import { AppDispatch, RootState } from "@/store"
+import { setFirstTime } from "@/redux/settingSlice"
 
 const OnBoarding = () => {
   const [currentScreen, setCurrentScreen] = useState(0)
   const fadeAnim = useState(new Animated.Value(1))[0]
   const { width, height } = useWindowDimensions()
+  const dispatch = useDispatch<AppDispatch>()
+  const {settings} = useSelector((state: RootState) => state)
 
   const screens = [
     { image: require("@/assets/images/onBoarding1.jpeg"), active: 2 },
@@ -48,12 +53,14 @@ const OnBoarding = () => {
         fadeIn()
       }, 200)
     } else {
-      router.push("/(tabs)/register")
+      dispatch(setFirstTime())
+      router.push("/(tabs)/(user)/home")
     }
   }
 
   const skipToHome = () => {
-    router.push("/(tabs)/register")
+    dispatch(setFirstTime())
+    router.push("/(tabs)/(user)/home")
   }
 
   const getStyles = (width: number, height: number) =>
@@ -155,6 +162,9 @@ const OnBoarding = () => {
     })
 
   const styles = getStyles(width, height)
+
+  if (!settings.isFirstTime)
+    return (<Redirect href={'/(tabs)/(user)/home'} />);
 
   return (
     <Animated.View style={{ flex: 1, opacity: fadeAnim }}>

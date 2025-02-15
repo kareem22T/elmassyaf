@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,28 +8,34 @@ import {
   SafeAreaView,
   useWindowDimensions,
   Modal,
+  Alert,
 } from 'react-native';
-import { Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { Feather } from '@expo/vector-icons';
 import Text from '@/components/Text';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { responsive } from '@/globals/globals';
+import { API_URL } from '@/globals/globals';
+import { useRoute } from '@react-navigation/native';
+import { api } from '@/API';
 
-interface BookingDetailsProps {
-  onConfirm: () => void;
-  onCancel: () => void;
-  onContactHost: () => void;
-}
+const BookingDetails: React.FC = () => {
+  const { reservationId } = useRoute().params;
+  const [reservation, setReservation] = useState<any>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const { width, height } = useWindowDimensions();
 
-const BookingDetails: React.FC<BookingDetailsProps> = ({
-  onConfirm,
-  onCancel,
-  onContactHost,
-}) => {
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [showCancelModal, setShowCancelModal] = useState(false);
-  const { width, height } = useWindowDimensions()
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const getStyles = (width: number, height: number) =>
     StyleSheet.create({
       container: {
@@ -38,21 +44,17 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
         paddingTop: 16,
       },
       header: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
       },
       headerTitle: {
-          fontSize: responsive(width, 16, 18, 24),
-          color: '#000',
+        fontSize: responsive(width, 16, 18, 24),
+        color: '#000',
       },
       headerIcon: {
-          fontSize: 24,
-      },
-      title: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 24,
       },
       propertyImage: {
         width: '100%',
@@ -83,62 +85,11 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
       },
       infoLabel: {
         color: '#666',
-        fontSize: 12
+        fontSize: 12,
       },
       infoValue: {
         fontWeight: '500',
         fontSize: 12,
-      },
-      roomDetailsButton: {
-        alignSelf: 'flex-start',
-        marginVertical: 10,
-      },
-      roomDetailsText: {
-        color: '#EE50FF',
-        fontSize: 12,
-      },
-      distanceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginVertical: 10,
-      },
-      distanceText: {
-        color: '#666',
-        fontSize: 12,
-      },
-      distanceLabel: {
-        color: '#666',
-        fontSize: 12,
-      },
-      documentsSection: {
-        marginTop: 6,
-      },
-      documentsTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        marginBottom: 15,
-        color: '#EE50FF',
-      },
-      documentRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#f8f8f8',
-        padding: 8,
-        borderRadius: 12,
-        marginBottom: 8,
-      },
-      documentName: {
-        flex: 1,
-        textAlign: 'right',
-        marginHorizontal: 10,
-      },
-      viewButton: {
-        padding: 5,
-      },
-      downloadButton: {
-        padding: 5,
       },
       buttonsContainer: {
         padding: 10,
@@ -181,11 +132,6 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
         alignItems: 'center',
         width: '80%',
       },
-      modalImage: {
-        width: 200,
-        height: 200,
-        resizeMode: 'contain',
-      },
       modalText: {
         fontSize: 24,
         color: '#EE50FF',
@@ -213,17 +159,72 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
       },
     });
 
-    const styles = getStyles(width, height)
+  const styles = getStyles(width, height);
 
-  const handleConfirm = () => {
-    setShowConfirmModal(true);
-    onConfirm?.();
+  const fetchReservationDetails = async () => {
+    try {
+      const response = await api.get(`${API_URL}/api/owner/reservations/${reservationId}`);
+      if (response.data.success) {
+        setReservation(response.data.reservation);
+      }
+    } catch (error) {
+      console.error('Error fetching reservation details:', error);
+    }
   };
 
-  const handleCancel = () => {
-    setShowCancelModal(true);
-    onCancel?.();
+  useEffect(() => {
+    fetchReservationDetails();
+  }, [reservationId]);
+
+  const handleAccept = async () => {
+    try {
+      const response = await api.put(`${API_URL}/api/owner/reservations/${reservationId}/accept`);
+      if (response.data.success) {
+        Alert.alert('تم القبول', 'تم قبول الحجز بنجاح');
+        fetchReservationDetails(); // Refresh reservation details
+      }
+    } catch (error) {
+      console.error('Error accepting reservation:', error);
+      Alert.alert('خطأ', 'فشل في قبول الحجز');
+    }
   };
+
+  const handleApprove = async () => {
+    try {
+      const response = await api.put(`${API_URL}/api/owner/reservations/${reservationId}/approve`);
+      if (response.data.success) {
+        Alert.alert('تم التأكيد', 'تم تأكيد الحجز بنجاح');
+        fetchReservationDetails(); // Refresh reservation details
+      }
+    } catch (error) {
+      console.error('Error approving reservation:', error);
+      Alert.alert('خطأ', 'فشل في تأكيد الحجز');
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      const response = await api.put(`${API_URL}/api/owner/reservations/${reservationId}/cancel`);
+      if (response.data.success) {
+        Alert.alert('تم الإلغاء', 'تم إلغاء الحجز بنجاح');
+        fetchReservationDetails(); // Refresh reservation details
+      }
+    } catch (error) {
+      console.error('Error canceling reservation:', error);
+      Alert.alert('خطأ', 'فشل في إلغاء الحجز');
+    }
+  };
+
+  if (!reservation) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -232,81 +233,75 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name='arrow-right' color={'#000'} size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} medium>المحفظة</Text>
-        <View style={{width: 32}}></View>
+        <Text style={styles.headerTitle} medium>تفاصيل الحجز</Text>
+        <View style={{ width: 32 }}></View>
       </View>
-      <ScrollView contentContainerStyle={{
-          padding: 16,
-      }}>
-
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Image
-          source={require('@/assets/images/home-img.jpeg')}
+          source={{ uri: reservation.unit.images[0]?.image || require('@/assets/images/home-img.jpeg') }}
           style={styles.propertyImage}
           resizeMode="cover"
         />
-
         <View style={styles.detailsContainer}>
           <View style={styles.priceRow}>
-            <Text style={styles.propertyName} bold>اسم الوحده</Text>
-            <Text style={styles.price} bold>$150,7</Text>
+            <Text style={styles.propertyName} bold>{reservation.unit.name}</Text>
+            <Text style={styles.price} bold>{reservation.booking_price} EGP</Text>
           </View>
-
           <View style={styles.infoRow}>
             <Text style={styles.infoValue}>اسم المدينه</Text>
             <Text style={styles.infoValue}>اسم الكومبوند</Text>
           </View>
-
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>رقم الطابق: 2</Text>
-            <Text style={styles.infoLabel}>يتوافر اسنانسير</Text>
+            <Text style={styles.infoLabel}>عدد البالغين: {reservation.adults_count}</Text>
+            <Text style={styles.infoLabel}>عدد الأطفال: {reservation.children_count || 0}</Text>
           </View>
-
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>عدد الغرف : 2 غرفه</Text>
-            <Text style={styles.roomDetailsText}>تفاصيل الغرف</Text>
+            <Text style={[styles.infoLabel, { fontSize: 9 }]}>تاريخ الحجز: {formatDate(reservation.date_from)}</Text>
+            <Text style={[styles.infoLabel, { fontSize: 9 }]}>تاريخ الانتهاء: {formatDate(reservation.date_to)}</Text>
           </View>
-
           <View style={styles.infoRow}>
-            <Text style={styles.distanceLabel}>المسافه بين الشاطئ و الوحده :</Text>
-            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-              <FontAwesome5 name='walking' size={14} color="#666" />
-              <Text style={styles.distanceText}>100 دقيقه</Text>
-            </View>
-          </View>
-
-          <View style={styles.documentsSection}>
-            <Text style={styles.documentsTitle}>صور الهويات</Text>
-            {[1, 2].map((item) => (
-              <View key={item} style={styles.documentRow}>
-                <TouchableOpacity style={styles.viewButton}>
-                  <FontAwesome name="eye" size={20} color="#666" />
-                </TouchableOpacity>
-                <Text style={styles.documentName}>rlgnlgflg.png</Text>
-                <TouchableOpacity style={styles.downloadButton}>
-                  <Ionicons name="download-outline" size={20} color="#EE50FF" />
-                </TouchableOpacity>
-              </View>
-            ))}
+            <Text style={styles.infoLabel}>حالة الدفع: {reservation.paid ? 'مدفوع' : 'غير مدفوع'}</Text>
+            <Text style={styles.infoLabel}>حالة الحجز: {reservation.status}</Text>
           </View>
         </View>
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity 
-            style={[styles.button, styles.confirmButton]} 
-            onPress={handleConfirm}
-          >
-            <Text style={styles.buttonText} bold>تأكيد الحجز</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.button, styles.cancelButton]} 
-            onPress={handleCancel}
-          >
-            <Text style={styles.buttonText} bold>الغاء الحجز</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.button, styles.contactButton]} 
-            onPress={() => {router.push('/(tabs)/(owner)/chat')}}
+          {reservation.status === 'pending' && (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleAccept}
+              >
+                <Text style={styles.buttonText} bold>قبول الحجز</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={handleCancel}
+              >
+                <Text style={styles.buttonText} bold>الغاء الحجز</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {reservation.status === 'accepted' && (
+            <TouchableOpacity
+              style={[styles.button, styles.confirmButton]}
+              onPress={handleApprove}
+            >
+              <Text style={styles.buttonText} bold>اتمام الحجز</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.button, styles.contactButton]}
+            onPress={() => {
+              router.push({
+                pathname: '/(tabs)/(owner)/chat',
+                params: {
+                  id: 0,
+                  name: reservation.user.name,
+                  image: reservation.user.image,
+                  user_id: reservation.user.id,
+                },
+              });
+            }}
           >
             <Text style={[styles.buttonText, styles.contactButtonText]} bold>تواصل مع العميل</Text>
           </TouchableOpacity>
@@ -322,10 +317,6 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Image
-              source={require('@/assets/images/congrats-icon.png')}
-              style={styles.modalImage}
-            />
             <Text style={styles.modalText} bold>تم تأكيد الحجز</Text>
             <Text style={styles.modalSubText}>يمكنك تغيير او الغاء الحجز بكل سهولة</Text>
             <TouchableOpacity
@@ -347,10 +338,6 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Image
-              source={require('@/assets/images/congrats-icon.png')}
-              style={styles.modalImage}
-            />
             <Text style={styles.modalText}>تم الغاء الحجز</Text>
             <TouchableOpacity
               style={styles.modalButton}
@@ -361,7 +348,6 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({
           </View>
         </View>
       </Modal>
-
     </SafeAreaView>
   );
 };

@@ -1,14 +1,73 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Image, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import Text from '@/components/Text';
-import { responsive } from '@/globals/globals';
+import { API_URL, responsive } from '@/globals/globals';
 import { router } from 'expo-router';
+import { api } from '@/API';
+import axios from 'axios';
+
+interface Reservation {
+  id: number;
+  date_from: string;
+  date_to: string;
+  adults_count: number;
+  children_count: number;
+  booking_price: string;
+  unit: {
+    name: string;
+    city_id: number;
+    unit_number: string;
+    images: Array<{
+      image: string;
+    }>;
+  };
+}
+
+interface ReservationsResponse {
+  success: boolean;
+  data: {
+    reservations: Reservation[];
+  };
+}
 
 export default function MyBookingsScreen() {
-  const { width, height } = useWindowDimensions()
-  
+  const { width, height } = useWindowDimensions();
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReservations = async () => {
+    try {
+      const { data } = await api.get<ReservationsResponse>(`${API_URL}/api/owner/reservations/all`);
+      if (data.success) {
+        setReservations(data.data.reservations);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error:', error.response?.data || error.message);
+      } else {
+        console.error('Error fetching reservations:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const getStyles = (width: number, height: number) =>
     StyleSheet.create({
       container: {
@@ -38,7 +97,7 @@ export default function MyBookingsScreen() {
         marginBottom: 4,
       },
       dateText: {
-        fontSize: 11,
+        fontSize: 9,
         color: '#4B4F5C',
         marginBottom: 4,
       },
@@ -244,7 +303,17 @@ export default function MyBookingsScreen() {
         },
     })
 
-  const styles = getStyles(width, height)
+  const styles = getStyles(width, height);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -265,93 +334,97 @@ export default function MyBookingsScreen() {
         </TouchableOpacity>
       </View> 
 
+      {/* Status Filter */}
+      <View style={{ padding: 16 }}>
+        <ScrollView 
+          style={styles.optionWrapper} 
+          contentContainerStyle={{ gap: 4, justifyContent: 'center', minWidth: '100%' }} 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+        >
+          <TouchableOpacity style={styles.optionBtnActive}>
+            <Text style={styles.optionTextActive}>الكل</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionBtn}>
+            <Text style={styles.optionText}>معلقة</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionBtn}>
+            <Text style={styles.optionText}>قيد التنفيذ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionBtn}>
+            <Text style={styles.optionText}>محجوزة</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionBtn}>
+            <Text style={styles.optionText}>اكتملت</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionBtn}>
+            <Text style={styles.optionText}>تم الغائها</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       {/* Booking List */}
-        <View style={{padding: 16}}>
-            <ScrollView style={styles.optionWrapper} contentContainerStyle={{gap: 4, justifyContent: 'center', minWidth: '100%'}} horizontal showsHorizontalScrollIndicator={false}>
-                <TouchableOpacity style={styles.optionBtnActive}>
-                    <Text style={styles.optionTextActive}>
-                        الكل
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionBtn}>
-                    <Text style={styles.optionText}>
-                        معلقه
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionBtn}>
-                    <Text style={styles.optionText}>
-                        قيد التنفيذ
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionBtn}>
-                    <Text style={styles.optionText}>
-                        محجوزه
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionBtn}>
-                    <Text style={styles.optionText}>
-                        اكتملت
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionBtn}>
-                    <Text style={styles.optionText}>
-                        تم الغائها
-                    </Text>
-                </TouchableOpacity>
-            </ScrollView>
-        </View>
       <ScrollView>
-      <View style={styles.cardWrapper}>
-        {[1, 2, 3, 4].map((item) => (
-          <View key={item} style={[styles.bookingCard, {width: '100%'}]}>
-            <View style={styles.bookingDetails}>
-              <Image
-                source={require('@/assets/images/home-img.jpeg')}
-                style={styles.propertyImage}
-              />
-              <View style={styles.bookingInfo}>
-                <View style={styles.row}>
-                <Text style={styles.propertyName} bold>اسم الكومبوند</Text>
-                <Text style={styles.price} medium>$150,7</Text>
-                </View>
-
-                <View style={styles.row}>
-                <Text style={styles.cityName}>اسم المدينه</Text>
-                <View style={styles.rating}>
-                  <Text>5.0</Text>
-                  <FontAwesome name='star' size={16} color="#FFD700" fill="#FFD700" />
-                </View>
-                </View>
-                <View style={styles.guestInfo}>
-                  <Text style={styles.capacityText}>2 فرد كبار</Text>
-                  <Text style={styles.capacityText}>3 فرد اطفال</Text>
-                </View>
-                <View style={styles.row}>
-                  <View style={{display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4}}>
-                    <Feather name='calendar' size={14} color="#4B4F5C" />
-                    <Text style={styles.capacityText}>
-                      حجز 3 أيام
-                    </Text>
+        <View style={styles.cardWrapper}>
+          {reservations.map((reservation) => (
+            <View key={reservation.id} style={[styles.bookingCard, { width: '100%' }]}>
+              <View style={styles.bookingDetails}>
+                <Image
+                  source={{ uri: reservation.unit.images[0]?.image || require('@/assets/images/home-img.jpeg') }}
+                  style={styles.propertyImage}
+                />
+                <View style={styles.bookingInfo}>
+                  <View style={styles.row}>
+                    <Text style={styles.propertyName} bold>{reservation.unit.name}</Text>
+                    <Text style={styles.price} medium>{reservation.booking_price} EGP</Text>
                   </View>
-                  <Text style={styles.capacityText}>رقم الوحده: (45B)</Text>
-                </View>
-                <View style={styles.row}>
-                  <Text style={styles.dateText}>السبت 6 أبريل 2024</Text>
-                  <Text style={styles.dateText}>الاحد 6 أبريل 2024</Text>
+
+                  <View style={styles.row}>
+                    <Text style={styles.cityName}>City {reservation.unit.city_id}</Text>
+                    <View style={styles.rating}>
+                      <Text>{reservation.unit.rate ? reservation.unit.rate.toFixed(1) : 'N/A'}</Text>
+                      <FontAwesome name='star' size={16} color="#FFD700" />
+                    </View>
+                  </View>
+
+                  <View style={styles.guestInfo}>
+                    <Text style={styles.capacityText}>{reservation.adults_count} فرد كبار</Text>
+                    <Text style={styles.capacityText}>{reservation.children_count || 0} فرد اطفال</Text>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Feather name='calendar' size={14} color="#4B4F5C" />
+                      <Text style={styles.capacityText}>
+                        حجز {reservation.days_count} أيام
+                      </Text>
+                    </View>
+                    <Text style={styles.capacityText}>رقم الوحده: ({reservation.unit.unit_number})</Text>
+                  </View>
+
+                  <View style={styles.row}>
+                    <Text style={styles.dateText}>{formatDate(reservation.date_from)}</Text>
+                    <Text style={styles.dateText}>{formatDate(reservation.date_to)}</Text>
+                  </View>
                 </View>
               </View>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity 
+                  onPress={() => { router.push({
+                    pathname: '/(tabs)/(owner)/bookingDetails',
+                    params: {
+                      reservationId: reservation.id,
+                    }
+                  }) }} 
+                  style={[styles.actionButton, styles.acceptButton]}
+                >
+                  <Text style={styles.acceptButtonText} medium>معرفة المزيد</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.actionButtons}>
-              <TouchableOpacity onPress={() => {router.push('/(tabs)/(owner)/bookingDetails')}} style={[styles.actionButton, styles.acceptButton]}>
-                <Text style={styles.acceptButtonText} medium>معرفة المزيد</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-

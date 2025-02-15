@@ -177,7 +177,7 @@ const getDateSelectionStatus = (date: number) => {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle} medium>حدد الفترات الزمنية المتاحة</Text>
+      <Text style={styles.sectionTitle} medium>حدد الفترات الزمنية المحجوزة</Text>
       <View style={styles.calendarHeader}>
         <TouchableOpacity onPress={() => changeMonth(-1)}>
           <Ionicons name="chevron-back" size={24} color="#EE50FF" />

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "95337313180",
+    "project_id": "tokyo-silicon-446510-g2",
+    "storage_bucket": "tokyo-silicon-446510-g2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95337313180:android:a92fb2f2c3408fb3e0ce59",
+        "android_client_info": {
+          "package_name": "com.kareem11.masyaf"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZSVCRkFuAddJDopfPuwZW0XgPfnjgSvM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

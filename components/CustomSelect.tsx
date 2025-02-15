@@ -14,6 +14,7 @@ interface CustomSelectProps {
   onChange: (value: string | number) => void;
   placeholder?: string;
   label?: string;
+  fontSize?: number;
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -22,6 +23,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   onChange,
   placeholder = 'Select an option',
   label,
+  fontSize,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const selectedOption = options.find(opt => opt.value == value);
@@ -33,7 +35,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         style={styles.selectButton}
         onPress={() => setIsOpen(true)}
       >
-        <Text style={styles.selectButtonText}>
+        <Text style={[styles.selectButtonText, {fontSize: fontSize || 16}]}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={24} color="#666" />

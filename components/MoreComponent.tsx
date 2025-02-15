@@ -12,10 +12,11 @@ import Text from './Text';
 import { router } from 'expo-router';
 import LogoutModal from './LogoutModal';
 import DeleteAccountModal from './DeleteModal';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/store';
 import { clearCredentials } from '@/redux/auth/authSlice';
-
+import { reloadAppAsync } from "expo";
+import { toggleUserType } from '@/redux/settingSlice';
 type RootStackParamList = {
   EditProfile: undefined;
   About: undefined;
@@ -51,6 +52,8 @@ export default function MoreComponent() {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const isAuthentication = useSelector((state: RootState) => state.auth.isAuthentication)
+  const userType = useSelector((state: RootState) => state.settings.userType)
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
@@ -63,7 +66,9 @@ export default function MoreComponent() {
   const onLogout = () => {
     setLogoutModalVisible(false);
     dispatch(clearCredentials())
-    router.replace('/(tabs)/login')
+    setTimeout(() => {
+      reloadAppAsync();
+    }, 500);
   };
 
   const onDelete = () => {
@@ -72,13 +77,29 @@ export default function MoreComponent() {
     // Add your delete account logic here
   };
 
+  const handleAddUnit = () => {
+    if (isAuthentication && userType == 'user')
+    dispatch(toggleUserType());
+    router.push('/(tabs)/(owner)/addUnit')
+  }
+
+  const handleReservation = () => {
+    if (isAuthentication && userType == 'owner')
+    dispatch(toggleUserType());
+    router.push('/(tabs)/(user)/home')
+  }
+
   return (
     <View style={styles.container}>
-      <MenuItem
-        title="تعديل حسابي"
-        icon="user"
-        onPress={() => router.push('/(tabs)/profile')}
-      />
+      {
+        isAuthentication && (
+          <MenuItem
+            title="تعديل حسابي"
+            icon="user"
+            onPress={() => router.push('/(tabs)/profile')}
+          />
+        )
+      }
       <MenuItem
         title="عن التطبيق"
         icon="info-circle"
@@ -94,17 +115,58 @@ export default function MoreComponent() {
         icon="clipboard"
         onPress={() => navigation.navigate('Complaint')}
       />
-      <MenuItem
-        title="تسجيل خروج"
-        icon="arrow-right"
-        onPress={handleLogout}
-      />
-      <MenuItem
-        title="حذف حساب"
-        icon="trash"
-        onPress={handleDeleteAccount}
-        color="#dc3545"
-      />
+      {
+        userType == 'user' ? (
+          <MenuItem
+            title="اضف وحدتك الان"
+            icon="calendar-plus-o"
+            onPress={() => handleAddUnit()}
+          />
+        ) : (
+          <MenuItem
+            title="احجز اقاماتك الان"
+            icon="calendar-plus-o"
+            onPress={() => handleReservation()}
+          />
+        )
+      }
+      {
+        isAuthentication && (
+          <MenuItem
+            title="تسجيل خروج"
+            icon="arrow-right"
+            onPress={handleLogout}
+          />
+        )
+      }
+      {
+        isAuthentication && (
+          <MenuItem
+            title="حذف حساب"
+            icon="trash"
+            onPress={handleDeleteAccount}
+            color="#dc3545"
+          />
+        )
+      }
+      {
+        !isAuthentication && (
+          <MenuItem
+            title="انشاء حساب"
+            icon="user-plus"
+            onPress={() => router.push('/(tabs)/register')}
+          />
+        )
+      }
+      {
+        !isAuthentication && (
+          <MenuItem
+            title="تسجيل الدخول"
+            icon="arrow-left"
+            onPress={() => router.push('/(tabs)/login')}
+          />
+        )
+      }
       <LogoutModal
         visible={logoutModalVisible}
         onClose={() => setLogoutModalVisible(false)}

@@ -13,12 +13,13 @@ interface DatePickerProps {
   onDatesSelected: (startDate: string | null, endDate: string | null) => void;
   defaultValue?: string | null;
   reservations: Array<{ date_from: string; date_to: string }>;
-  available_dates: Array<{ from: string; to: string }>;
+  unavailable_dates: Array<{ from: string; to: string }>;
   setEnd: (date: Date) => void;
   setStart: (date: Date) => void;
+  unit: any
 }
 
-const IntervalPicker: React.FC<DatePickerProps> = ({ onDatesSelected, defaultValue, available_dates, setStart, setEnd }) => {
+const IntervalPicker: React.FC<DatePickerProps> = ({ onDatesSelected, defaultValue, unavailable_dates, setStart, setEnd, unit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -32,15 +33,24 @@ const IntervalPicker: React.FC<DatePickerProps> = ({ onDatesSelected, defaultVal
   };
 
   const isDateAvailable = (date: Date): boolean => {
-    const dateTimestamp = date.getTime();
-    const isWithinAvailable = available_dates.some(avail => {
-      const availFrom = new Date(avail.from).getTime();
-      const availTo = new Date(avail.to).getTime();
-      return dateTimestamp >= availFrom && dateTimestamp <= availTo;
-    });
-    return isWithinAvailable;
-  };
+    // First check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
+    
+    if (date < today) {
+      return false;
+    }
 
+    // Then check if date is in unavailable ranges
+    const dateTimestamp = date.getTime();
+    const isUnavailable = unavailable_dates.some(unavail => {
+      const unavailFrom = new Date(unavail.from).getTime();
+      const unavailTo = new Date(unavail.to).getTime();
+      return dateTimestamp >= unavailFrom && dateTimestamp <= unavailTo;
+    });
+    
+    return !isUnavailable;
+  };
   const isRangeAvailable = (start: Date, end: Date): boolean => {
     let current = new Date(start);
     while (current <= end) {
@@ -95,6 +105,32 @@ const IntervalPicker: React.FC<DatePickerProps> = ({ onDatesSelected, defaultVal
   };
 
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+function getSuitablePrice(unit, date, reservationDays = 1) {
+    const checkDate = new Date(date);
+    const dayOfWeek = checkDate.getDay(); // 0 (Sunday) - 6 (Saturday)
+    
+    let basePrice = parseFloat(unit.price);
+    
+    // Apply special reservation time price
+    const specialTime = unit.special_reservation_times.find(({ from, to }) => checkDate >= new Date(from) && checkDate <= new Date(to));
+    if (specialTime) {
+        basePrice = parseFloat(specialTime.price);
+    }
+    
+    // Apply weekend price if applicable
+    if (unit.weekend_prices && (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6)) { // Assuming Friday (5) & Saturday (6) as weekends
+        basePrice = parseFloat(unit.weekend_price);
+    }
+    
+    // Apply sales discount if available
+    const sale = unit.sales.find(({ from, to }) => checkDate >= new Date(from) && checkDate <= new Date(to));
+    if (sale) {
+        basePrice -= basePrice * (parseFloat(sale.sale_percentage) / 100);
+    }
+    
+    return parseInt(basePrice);
+}
+
 
   const renderDays = () => {
     const year = currentDate.getFullYear();
@@ -121,8 +157,14 @@ const IntervalPicker: React.FC<DatePickerProps> = ({ onDatesSelected, defaultVal
           disabled={!day || !isAvailable}
           onPress={() => day && handleDateSelection(day)}
         >
-          <Text style={[styles.dayText, !isAvailable ? styles.disabledDayText : null]}>
+          <Text style={[styles.dayText, !isAvailable ? styles.disabledDayText : null,
+            day && isDaySelected(day) && isAvailable ? styles.selectedDayText : null,
+            day && isDayInRange(day) && isAvailable ? styles.selectedDayText : null,
+          ]}>
             {day || ''}
+          </Text>
+          <Text style={{fontSize: 10, color: '#ccc'}} medium>
+            {getSuitablePrice(unit, date, 1)}
           </Text>
         </TouchableOpacity>
       );
@@ -256,8 +298,10 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 4,
-    borderRadius: 20,
+    backgroundColor: "#eee",
+    borderWidth: 2,
+    boxSizing: 'border-box',
+    borderColor: '#FAFAFA'
   },
   activeDay: {},
   inactiveDay: {},
@@ -265,11 +309,10 @@ const styles = StyleSheet.create({
     color: '#222222',
   },
   selectedDay: {
-    borderWidth: 2,
-    borderColor: '#EE50FF',
+    backgroundColor: '#EE50FF',
   },
   selectedDayText: {
-    color: '#EE50FF',
+    color: '#fff',
   },
   disabledDay: {
     opacity: 0.5,

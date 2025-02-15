@@ -3,10 +3,14 @@ import { setCredentials, clearCredentials } from './../redux/auth/authSlice';
 import { Store } from '@reduxjs/toolkit';
 import { API_URL } from '@/globals/globals';
 import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 const api = axios.create({
   baseURL: API_URL, // Replace with your API base URL
   withCredentials: false, // Include cookies with requests if needed
+    headers: {
+    'X-Locale': 'ar', // Set locale to Arabic
+  },
 });
 
 const setupInterceptors = (store: Store) => {
@@ -14,7 +18,7 @@ const setupInterceptors = (store: Store) => {
     (config) => {
       const state = store.getState(); // Access the current state directly from the store
       const token = state.auth.token; // Get the token from the state
-
+      config.headers['X-Locale'] = 'ar'; // Ensure the locale header is always set
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -54,7 +58,11 @@ const setupInterceptors = (store: Store) => {
       if (error.response && error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         store.dispatch(clearCredentials()); // Dispatch the action to clear credentials
-        router.push('/(tabs)/login');
+        Toast.show({
+          type: 'error',
+          text1: 'رسالة خطا',
+          text2: 'يجب عليك تسجيل الدخول اولا',
+        })
       }
 
       return Promise.reject(error);

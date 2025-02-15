@@ -10,6 +10,19 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchUnits } from '@/redux/unitSlice';
 import OwnerTaskBar from '@/components/OwnerTaskBar';
 import UserTaskBar from '@/components/UserTaskBar';
+import { 
+  Pusher,
+  PusherEvent,
+} from '@pusher/pusher-websocket-react-native';
+import { fetchNotifications } from '@/redux/notificationsSlice';
+import { fetchChats, fetchMessages } from '@/redux/chatSlice';
+  function onSubscriptionSucceeded( data:any) {
+    console.log(`onSubscriptionSucceeded:data: ${data}`);
+  }
+  function onSubscriptionError(channelName: string, message:string, e:any) {
+    console.log(`onSubscriptionError: ${message} channelName: ${channelName} Exception: ${e}`);
+  }
+
 
 const TabLayout = () => {
   const router = useRouter();
@@ -17,13 +30,14 @@ const TabLayout = () => {
   const isAuthentication = useSelector((state: RootState) => state.auth.isAuthentication);
   const isVerified = useSelector((state: RootState) => state.auth.isVerified);
   const type = useSelector((state: RootState) => state.auth.user?.type);
-  const token = useSelector((state: RootState) => state.auth.token);  
+  const id = useSelector((state: RootState) => state.auth.user?.id);  
+  const auth = useSelector((state: RootState) => state.auth);  
+  const {userType} = useSelector((state: RootState) => state.settings);  
   const dispatch = useDispatch<AppDispatch>();
-  const isActive = (path: string) => pathname == path;
-
-
+  const isActive = (path: string) => pathname == path;  
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false); // Track mount status
+  const messages = useSelector((state : RootState) => state.chat.messages)
 
   useEffect(() => {
     setIsMounted(true); // Mark as mounted
@@ -31,15 +45,15 @@ const TabLayout = () => {
 
   useEffect(() => {
     if (isMounted) {
-      authMiddleware(pathname, type, isAuthentication, isVerified, isMounted);
-      guestMiddleware(pathname, isAuthentication, type, isMounted);
+      authMiddleware(pathname, userType, isAuthentication, isVerified, isMounted);
+      guestMiddleware(pathname, isAuthentication, userType, isMounted);
     }
   }, [pathname, isMounted]);
 
   useEffect(() => {
     const checkAuth = async () => {
-      await authMiddleware(pathname, type, isAuthentication, isVerified, isMounted);
-      await guestMiddleware(pathname, isAuthentication, type, isMounted);
+      await authMiddleware(pathname, userType, isAuthentication, isVerified, isMounted);
+      await guestMiddleware(pathname, isAuthentication, userType, isMounted);
       setLoading(false); // Mark middleware as complete
     };
     
@@ -48,9 +62,101 @@ const TabLayout = () => {
   }, [pathname, isMounted]);  
 
   useEffect(() => {
-    if (isAuthentication && type == 'owner')
+    if (isAuthentication && userType == 'owner') {
       dispatch(fetchUnits())
+    }
+    if (isAuthentication)
+      dispatch(fetchChats())
   }, [isAuthentication])
+
+
+    useEffect(() => {
+    const pusher = Pusher.getInstance();
+    const connectPusher = async () => {
+      await pusher.init({
+        apiKey: "85d8aefb7b8d34dc9f17",
+        cluster: "eu"
+      });
+      
+      await pusher.connect();
+      await pusher.subscribe({
+        channelName: "channel_" + id,
+        onEvent: (event: PusherEvent) => {
+          console.log(`Event received: ${JSON.stringify(event)}`);
+          
+          const data = JSON.parse(event.data);
+          
+          if (event.eventName) {
+
+            switch (event.eventName) {
+              case 'chat':
+                  if (data.message) {
+                  Toast.show({
+                      type: 'info',
+                      text1: 'رسالة جديدة',
+                      text2: data.message.message,
+                      position: 'top',
+                    });
+                  }
+    
+                  dispatch(fetchChats());
+                  dispatch(fetchMessages(messages[0].chat_id));
+                break;
+              case 'notification':
+                  if (data.body) {
+                  Toast.show({
+                      type: 'info',
+                      text1: data.title,
+                      text2: data.body,
+                      position: 'top',
+                      visibilityTime: 3000
+                    });
+                  }
+    
+                  dispatch(fetchNotifications());
+                  dispatch(fetchChats());
+                  dispatch(fetchMessages(messages[0].chat_id));
+                  break;
+            
+              case 'approved':
+                Toast.show({
+                  type: 'success',
+                  text1: data.title,
+                  text2: data.body,
+                  position: 'top',
+                  visibilityTime: 3000
+                });
+
+                dispatch(fetchNotifications());
+                break;
+            
+              case 'Booking':
+                Toast.show({
+                  type: 'success',
+                  text1: data.title,
+                  text2: data.body,
+                  position: 'top',
+                  visibilityTime: 3000
+                });
+
+                dispatch(fetchNotifications());
+                  break;
+            
+              default:
+                break;
+            }
+          }
+
+        },
+        onSubscriptionSucceeded,
+        onSubscriptionError,
+      });
+      }
+      connectPusher()
+  
+        pusher.unsubscribe({channelName: "channel_" + id})
+  }, [id])
+
 
   if (loading) {
     return (
@@ -60,7 +166,7 @@ const TabLayout = () => {
     );
   }
 
-  if (isActive('/onBoarding') || isActive('/login') || isActive('/forgotPassword') || isActive('/verify') || isActive('/resetPassword') || isActive('/register') || isActive('/notifications') || isActive('/bookingDetails') || isActive('/chat') || isActive('/units') || isActive('/unitDetails') || isActive('/confirmPayment') || isActive('/payNow')) {
+  if (isActive('/onBoarding') || isActive('/login') || isActive('/forgotPassword') || isActive('/verify') || isActive('/resetPassword') || isActive('/register') || isActive('/notifications') || isActive('/bookingDetails') || isActive('/chat') || isActive('/units') || isActive('/unitDetails') || isActive('/loginFirst') || isActive('/confirmPayment') || isActive('/payNow') || isActive('/allUnits')) {
     return (
       <>
         <Slot />
@@ -73,12 +179,12 @@ const TabLayout = () => {
     <View style={[styles.container, isActive('/notifications') && { backgroundColor: '#fff', flex: 1 }]}>
       <Slot />
       {
-        type == 'owner' && (
+        userType == 'owner' && (
           <OwnerTaskBar />
         )
       }
       {
-        type == 'user' && (
+        userType == 'user' && (
           <UserTaskBar />
         )
       }

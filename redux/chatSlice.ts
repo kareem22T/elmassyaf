@@ -1,100 +1,79 @@
-import { api } from '@/API';
-import { API_URL } from '@/globals/globals';
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { api } from "@/API";
+import { API_URL } from "@/globals/globals";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
-// Define the types for the chat and state
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    photo: string;
-    created_at: string;
-    updated_at: string;
-    is_phone_verified_for_web_registeration: number;
-    verification_code: string | null;
-    current_code_expired_at: string | null;
-}
+const API_BASE_URL = API_URL + '/api';
 
-interface Employee {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    created_at: string;
-    updated_at: string;
-    password: string;
-    is_phone_verified: number;
-    remember_token: string | null;
-    verification_code: string | null;
-    current_code_expired_at: string | null;
-    member_role: string;
-    company_id: number;
-}
-
-interface Chat {
-    id: number;
-    user_id: number;
-    employee_id: number;
-    created_at: string;
-    updated_at: string;
-    unseen_by_user: number;
-    unseen_by_employee: number;
-    user: User;
-    employee: Employee;
-    latest_msg: string;
-    latest_msg_date: string;
-}
-
-
-interface ChatState {
-    chats: Chat[];
-    loading: boolean;
-    error: string | null;
-    selectedChat: Chat | null; // Add selected chat property
-    selectedChatToggeled: boolean; // Add selected chat property
-}
-
-// Initial state
-const initialState: ChatState = {
-    chats: [],
-    loading: false,
-    error: null,
-    selectedChat: null,
-    selectedChatToggeled: false,
-};
-
-// Async thunk to fetch chats
-export const fetchChats = createAsyncThunk('chats/fetchChats', async (_, { rejectWithValue }) => {
+// Fetch all chats
+export const fetchChats = createAsyncThunk("chats/fetchChats", async (_, { rejectWithValue }) => {
     try {
-        const response = await api.get(API_URL + '/api/chat?type=employee');
-        return response.data.data as Chat[];
+        const response = await api.get(`${API_BASE_URL}/chats`);
+        return response.data.chats;
     } catch (error: any) {
-        return rejectWithValue(error.response?.data?.message || 'Something went wrong');
+        return rejectWithValue(error.response?.data || error.message);
     }
 });
+
+// Fetch messages for a specific chat
+export const fetchMessages = createAsyncThunk("chats/fetchMessages", async (chatId: number, { rejectWithValue }) => {
+    try {
+        const response = await api.get(`${API_BASE_URL}/chats/${chatId}/messages`);
+        return response.data.messages;
+    } catch (error: any) {
+        return rejectWithValue(error.response?.data || error.message);
+    }
+});
+
+// Send a message
+export const sendMessage = createAsyncThunk("chats/sendMessage", async ({ message, receiver_id }: { message: string; receiver_id: number }, { rejectWithValue }) => {
+    try {
+        const response = await api.post(`${API_BASE_URL}/chats/send-message`, { message, receiver_id });
+        
+        return response.data;
+    } catch (error: any) {
+        return rejectWithValue(error.response?.data || error.message);
+    }
+});
+
+// Mark messages as seen
+export const markMessagesAsSeen = createAsyncThunk("chats/markMessagesAsSeen", async (chatId: number, { rejectWithValue }) => {
+    try {
+        const response = await api.post(`${API_BASE_URL}/chats/${chatId}/seen-messages`);
+        return response.data;
+    } catch (error: any) {
+        return rejectWithValue(error.response?.data || error.message);
+    }
+});
+
+// Delete a chat
+export const deleteChat = createAsyncThunk("chats/deleteChat", async (chatId: number, { rejectWithValue }) => {
+    try {
+        const response = await api.delete(`${API_BASE_URL}/chats/${chatId}`);
+        return { chatId, message: response.data.message };
+    } catch (error: any) {
+        return rejectWithValue(error.response?.data || error.message);
+    }
+});
+
+interface ChatState {
+    chats: any[];
+    messages: any;
+    loading: boolean;
+    error: string | null;
+}
+
+const initialState: ChatState = {
+    chats: [],
+    messages: [],
+    loading: false,
+    error: null,
+};
+
 const chatSlice = createSlice({
-    name: 'chats',
+    name: "chats",
     initialState,
-    reducers: {
-        setUnseenByUser: (state, action: PayloadAction<{ chatId: number; unseenCount: number }>) => {
-            const { chatId, unseenCount } = action.payload;
-            const chat = state.chats.find((c) => c.id === chatId);
-            if (chat) {
-                chat.unseen_by_employee = unseenCount;
-            }
-        },
-        setSelectedChat: (state, action: PayloadAction<Chat | null>) => {
-            state.selectedChat = action.payload; // Update the selected chat
-        },
-        clearSelectedChat: (state) => {
-            state.selectedChat = null; // Clear the selected chat
-        },
-        setSelectedChatToggeled: (state) => {
-            state.selectedChatToggeled = !state.selectedChatToggeled; // Clear the selected chat
-        },
-    },
+    reducers: {},
     extraReducers: (builder) => {
         builder
             .addCase(fetchChats.pending, (state) => {
@@ -108,9 +87,20 @@ const chatSlice = createSlice({
             .addCase(fetchChats.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
+            })
+            .addCase(fetchMessages.fulfilled, (state, action) => {
+                state.messages = action.payload;
+            })
+            .addCase(fetchMessages.rejected, (state, action) => {
+                state.messages = [];
+            })
+            .addCase(sendMessage.fulfilled, (state) => {
+                state.loading = false;
+            })
+            .addCase(deleteChat.fulfilled, (state, action) => {
+                state.chats = state.chats.filter((chat) => chat.id !== action.payload.chatId);
             });
     },
 });
 
-export const { setUnseenByUser, setSelectedChat, clearSelectedChat, setSelectedChatToggeled } = chatSlice.actions;
 export default chatSlice.reducer;

@@ -402,33 +402,6 @@ const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
                 <Text style={styles.subtitle}>تسجيل دخول بصفتي</Text>
 
-                <View style={styles.toggleContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      userType === 'owner' && styles.toggleButtonActive
-                    ]}
-                    onPress={() => setUserType('owner')}
-                  >
-                    <Text style={[
-                      styles.toggleText,
-                      userType === 'owner' && styles.toggleTextActive
-                    ]}>مالك</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      userType === 'user' && styles.toggleButtonActive
-                    ]}
-                    onPress={() => setUserType('user')}
-                  >
-                    <Text style={[
-                      styles.toggleText,
-                      userType === 'user' && styles.toggleTextActive
-                    ]}>مستخدم</Text>
-                  </TouchableOpacity>
-                </View>
-
                 <View style={styles.inputContainer}>
                   <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
                   <TextInput

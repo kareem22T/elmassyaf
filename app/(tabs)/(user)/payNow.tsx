@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, View, Image, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Calendar } from 'lucide-react-native';
@@ -10,6 +10,10 @@ import Text from '@/components/Text';
 import axios from 'axios';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { api } from '@/API';
+import Toast from 'react-native-toast-message';
+import SuccessScreen from '@/components/success';
+import PaymentWebView from '@/components/PaymentWebView';
 
 interface BookingDetailsProps {
   navigation?: any;
@@ -380,6 +384,8 @@ export const BookingDetailsScreen: React.FC<BookingDetailsProps> = () => {
   const [identityImages, setIdentityImages] = useState<string[]>([]);
       const [adultsCount, setAdultsCount] = useState(1);
     const [childrenCount, setChildrenCount] = useState(0);
+    const [paymentUrl, setPaymentUrl] = useState<string>('');
+    const [showPaymentWebView, setShowPaymentWebView] = useState(false);
 
 const [uploading, setUploading] = useState(false);
     const updateCount = (type: 'adults' | 'children', increment: boolean, maxCount: number) => {
@@ -434,6 +440,80 @@ const [uploading, setUploading] = useState(false);
 
     fetchUnit();
   }, []);
+
+  const [modalVisible, setModalVisible] = useState(false)
+  const handlePayNow = async () => {
+      if (!start)
+        Toast.show({
+          type: 'error',
+          text1: 'حدث خطأ ما!',
+          text2: 'اختار تاريخ البدء',
+          duration: 5000,
+        });
+      else if (!end)
+        Toast.show({
+          type: 'error',
+          text1: 'حدث خطأ ما!',
+          text2: 'اختار تاريخ النهائة',
+          duration: 5000,
+        });
+      else if (!id)
+        Toast.show({
+          type: 'error',
+          text1: 'حدث خطأ ما!',
+          text2: ' اختر الوحدة',
+          duration: 5000,
+        });
+      else if(!adultsCount)
+        Toast.show({
+          type: 'error',
+          text1: 'حدث خطأ ما!',
+          text2: 'ادخل عدد النزلاء',
+          duration: 5000,
+        });
+      else if (identityImages.length == 0)
+        Toast.show({
+          type: 'error',
+          text1: 'حدث خطأ ما!',
+          text2: 'ارفع صور الهويات',
+          duration: 5000,
+        });
+      else {
+        const formData = new FormData();
+        formData.append('unit_id', id);
+        formData.append('date_from', start);
+        formData.append('date_to', end);
+        formData.append('adults_count', String(adultsCount));
+        formData.append('children_count', String(childrenCount));
+
+        identityImages.forEach((image, index) => {
+          formData.append('ids[' + index + ']', {
+            uri: image,
+            name: `identity_${index}.jpg`,
+            type: 'image/jpg',
+          });
+        })  
+
+        try {
+          const response = await api.post(API_URL + "/api/user/reservations/create", formData,{
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          setPaymentUrl(response.data.payment_url);
+          setShowPaymentWebView(true);
+        } catch (err) {
+          setError(err.message);
+          console.log(err.message);
+          
+        } finally {
+          setLoading(false);
+        }
+      }
+  }
+      const handlePaymentComplete = () => {
+      setShowPaymentWebView(false);
+      setModalVisible(true);
+    };
+
 
     if (loading) return <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><ActivityIndicator size="large" color="#EE50FF" /></View>
   
@@ -569,14 +649,7 @@ const [uploading, setUploading] = useState(false);
             gap: 16,
             padding: 16,
         }}>
-            <Pressable style={styles.bookButton} onPress={() => {
-                router.push({
-                    pathname: '/(tabs)/(user)/confirmPayment',
-                    params: {
-                        id: id,
-                    },
-                })
-            }}>
+            <Pressable style={styles.bookButton} onPress={handlePayNow}>
             <Text style={styles.bookButtonText} bold>دفع المقدم</Text>
             </Pressable>
             <Pressable style={[styles.bookButton, {
@@ -586,6 +659,12 @@ const [uploading, setUploading] = useState(false);
             <Text style={[styles.bookButtonText, {color: '#fff'}]} bold>حذف الحجز</Text>
             </Pressable>
         </View>
+        <PaymentWebView
+          visible={showPaymentWebView}
+          url={paymentUrl}
+          onClose={handlePaymentComplete}
+        />
+        <SuccessScreen title={'تم وضع حجزك بنجاح'} sub_title={'سوف يتم ابلاغك فور تاكيده اذا لذم'} visible={modalVisible} onClose={() => router.replace('/(tabs)/(user)/reservation')} />
     </SafeAreaView>
   );
 };

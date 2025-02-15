@@ -230,7 +230,7 @@ const ConfirmPayment = () => {
   useEffect(() => {
     const fetchUnit = async () => {
       try {
-        const response = await axios.get(API_URL + "/api/user/home/get/" + id);
+        const response = await api.get(API_URL + "/api/user/home/get/" + id);
         setUnit(response.data); // Assuming the data is directly useful
       } catch (err) {
         setError(err.message);
@@ -288,9 +288,10 @@ const ConfirmPayment = () => {
                 unit && (
                     <ScrollView style={styles.scrollView} contentContainerStyle={{padding: 16}}>
                         <IntervalPickerReservation
-                            available_dates={unit.available_dates}
+                            unavailable_dates={unit.unavailable_dates.concat(unit.reservations?.map(res => {return{from: res.date_from, to: res.date_to}})) || []}
                             setStart={setStart}
                             setEnd={setEnd}
+                            unit={unit}
                             onDatesSelected={(from, to) => handleGetPrice(from, to)}
                         />
                         <View style={{

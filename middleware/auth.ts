@@ -1,18 +1,19 @@
 import { router } from "expo-router";
 
 const routes = [
-    '/home',
     '/wallet',
     '/myBookings',
     '/chats',
     '/chat',
     '/profile',
     '/addUnit',
-    '/more',
     '/statistics',
-    '/units',
+    '/myUnits',
     '/bookingDetails',
-    '/notifications'
+    '/notifications',
+    '/wishlist',
+    '/payNow',
+    '/reservation',
 ]
 
 export default async function authMiddleware(pathname:string, type: string | undefined, isAuthentication: boolean, isVerified: boolean, isMounted: boolean) {
@@ -20,7 +21,7 @@ export default async function authMiddleware(pathname:string, type: string | und
 
     if (routes.includes(pathname)) {
         if (!isAuthentication) {
-            router.replace('/(tabs)/login')
+            router.replace('/(tabs)/loginFirst')
             return false;
         }
     

@@ -8,6 +8,7 @@ import notificationReducer from './redux/notificationsSlice';
 import bookingReducer from './redux/bookingSlice';
 import settingReducer from './redux/settingSlice';
 import unitReducer from './redux/unitSlice';
+import wishlistReducer from './redux/wishlistSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -16,12 +17,13 @@ const rootReducer = combineReducers({
   bookings: bookingReducer,
   settings: settingReducer,
   units: unitReducer,
+  wishlist: wishlistReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth', 'chat'], // Persist only the auth slice
+  whitelist: ['auth', 'settings'], // Persist only the auth slice
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

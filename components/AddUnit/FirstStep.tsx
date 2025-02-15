@@ -130,6 +130,7 @@ const handleMapOpen = () => {
         
 
         <MapView
+          mapType='satellite'
           style={{ flex: 1 }}
           region={region}
           onPress={handleMapPress}
@@ -280,13 +281,15 @@ const handleSelectCompound = (value: string) => {
 
     fetchCities();
   }, []);
+const [selectedCity, setSelectedCity] = useState(null);
 
+// Fetch locations based on selected city
 useEffect(() => {
   const fetchLocations = async () => {
     try {
       let url = selectedUnitType === 'unit'
-        ? `${API_URL}/api/owner/dropdown/compounds`
-        : `${API_URL}/api/owner/dropdown/hotels`;
+        ? `${API_URL}/api/owner/dropdown/compounds?city_id=${selectedCity}`
+        : `${API_URL}/api/owner/dropdown/hotels?city_id=${selectedCity}`;
 
       const response = await axios.get(url);
       if (response.data.success) {
@@ -294,7 +297,7 @@ useEffect(() => {
           label: location.name,
           value: location.id.toString(),
         }));
-        setLocationsOriginal(response.data.data)
+        setLocationsOriginal(response.data.data);
         setLocations(mappedLocations);
       }
     } catch (error) {
@@ -302,11 +305,10 @@ useEffect(() => {
     }
   };
 
-  fetchLocations();
-}, [selectedUnitType]);
-
-
-
+  if (selectedCity) {
+    fetchLocations();
+  }
+}, [selectedUnitType, selectedCity]);
   return (
     <View style={styles.content}>
       <View style={styles.unitTypeButtons}>
@@ -382,9 +384,13 @@ useEffect(() => {
           value={formData.city}
           placeholder="اختر مدينة"
           options={cities}
-          onChange={(value) => handleChange('city', value)}
-          />
+          onChange={(value) => {
+            handleChange('city', value);
+            setSelectedCity(value);
+          }}
+        />
         </View>
+
         <View style={{flex: 1}}>
           <CustomSelect
             label={selectedUnitType === 'unit' ? 'اختر المجمع السكني' : 'اختر الفندق'}
@@ -422,7 +428,7 @@ useEffect(() => {
                 style={styles.input}
                 value={formData.unitNumber}
                 onChangeText={(value) => handleChange('unitNumber', value)}
-                placeholder="25B"
+                placeholder="رقم الشاليه"
               />
             </View>
             <View style={styles.halfWidth}>
@@ -433,7 +439,7 @@ useEffect(() => {
                 style={styles.input}
                 value={formData.floor}
                 onChangeText={(value) => handleChange('floor', value)}
-                placeholder="2"
+                placeholder="حدد الطابق"
                 keyboardType="numeric"
               />
             </View>
@@ -452,7 +458,7 @@ useEffect(() => {
                 style={styles.input}
                 value={formData.floor}
                 onChangeText={(value) => handleChange('floor', value)}
-                placeholder="2"
+                placeholder="حدد الطابق"
                 keyboardType="numeric"
               />
             </View>
@@ -464,7 +470,7 @@ useEffect(() => {
                 style={styles.input}
                 value={formData.roomNumber}
                 onChangeText={(value) => handleChange('roomNumber', value)}
-                placeholder="1"
+                placeholder="رقم الغرفة"
               />
             </View>
           </View>

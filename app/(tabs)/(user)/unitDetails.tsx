@@ -24,9 +24,48 @@ import axios from 'axios';
 import moment from "moment";
 import "moment/locale/ar"; // Import Arabic locale
 import { useRoute } from '@react-navigation/native';
+import { api } from '@/API';
+import WebView from 'react-native-webview';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store';
 
 // Force RTL layout
 I18nManager.forceRTL(true);
+const htmlContent = (element) => {
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@100..900&display=swap" rel="stylesheet">
+        <style>
+        *{
+          font-family: "Noto Kufi Arabic", serif;
+        }
+        p{
+            font-size: 12px !important;
+        }
+        ul {
+                font-size: 12px !important;
+        }
+        </style>
+    </head>
+    <body>
+    ${element}
+      <script>
+        function sendHeight() {
+          let height = document.documentElement.scrollHeight;
+          window.ReactNativeWebView.postMessage(height);
+        }
+        window.onload = sendHeight;
+        window.addEventListener('resize', sendHeight);
+      </script>
+    </body>
+    </html>
+  `
+}
+
 
 const handleMapPress = () => {
     console.log('pressed');
@@ -34,6 +73,8 @@ const handleMapPress = () => {
 }
 const HotelDetailsScreen = () => {
     const { id } = useRoute().params;
+    const user_id = useSelector((state: RootState) => state.auth.user?.id)
+
     const player = useVideoPlayer('https://clicksegypttechnologies.com/storage/01JDD66ZXWYP1MK1NWTSES7X74.mp4', player => {
         player.loop = true;
         player.play();
@@ -41,7 +82,7 @@ const HotelDetailsScreen = () => {
     const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
     const { width, height } = useWindowDimensions()
     const [selectedImage, setSelectedImage] = useState("");
-
+  const [webViewHeight, setWebViewHeight] = useState(100); // Default height
     const [images, setImages] = useState([])
 
     const getStyles = (width: number, height: number) =>
@@ -255,7 +296,7 @@ const HotelDetailsScreen = () => {
   useEffect(() => {
     const fetchUnit = async () => {
       try {
-        const response = await axios.get(API_URL + "/api/user/home/get/" + id);
+        const response = await api.get(API_URL + "/api/user/home/get/" + id);
         setUnit(response.data); // Assuming the data is directly useful
       } catch (err) {
         setError(err.message);
@@ -776,27 +817,42 @@ const HotelDetailsScreen = () => {
                 )
             }
 
-            <View style={{
-                padding: 12,
-                borderRadius: 8,
-                shadowColor: '#878787',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 8,
-                backgroundColor: '#FFFFFF',
-                marginBottom: 24
-            }}>
-                <Text style={{
-                    fontSize: 14
-                }} bold>وصف الوحده/ غرفه</Text>
-                <Text style={{
-                    fontSize: 12,
-                    color: '#656565'
-                }}>
-                    {unit?.description}
-                </Text>
-            </View>
+            {
+                unit?.description && (
+                    <View style={{
+                        padding: 12,
+                        borderRadius: 8,
+                        shadowColor: '#878787',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 8,
+                        backgroundColor: '#FFFFFF',
+                        marginBottom: 24
+                    }}>
+                        <Text style={{
+                            fontSize: 14
+                        }} bold>وصف الوحده/ غرفه</Text>
+                        <WebView
+                            originWhitelist={['*']}
+                            source={{ html: htmlContent(unit?.description) }}
+                            javaScriptEnabled
+                            domStorageEnabled
+                            injectedJavaScript={`
+                                window.ReactNativeWebView.postMessage(document.documentElement.scrollHeight);
+                            `}
+                            onMessage={(event) => {
+                            const height = Number(event.nativeEvent.data);
+                            if (!isNaN(height) && height > 0) {
+                                if (webViewHeight == 100)
+                                setWebViewHeight(height);
+                            }
+                            }}
+                            style={{ width: "100%", height: webViewHeight }}
+                        />
+                    </View>
+                )
+            }
 
             {
                 (unit?.type == 'unit') && (
@@ -816,11 +872,12 @@ const HotelDetailsScreen = () => {
                         }}>
                             <MapView
                             style={{ flex: 1 }}
+                            mapType='satellite'
                             region={{
                                 latitude: parseFloat(unit?.lat),
                                 longitude: parseFloat(unit?.lng),
-                                latitudeDelta: 0.01,
-                                longitudeDelta: 0.01,
+                                latitudeDelta: 0.5,
+                                longitudeDelta: 0.5,
                             }}
                             onPress={handleMapPress}
                             >
@@ -852,7 +909,7 @@ const HotelDetailsScreen = () => {
                 justifyContent: 'space-between',
                 gap: 12
             }}>
-                <Image source={{uri: unit?.owner?.image}} style={{
+                <Image source={{uri: unit?.owner?.image || 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'}} style={{
                     width: 50,
                     height: 50,
                     borderRadius: 40,
@@ -961,7 +1018,7 @@ const HotelDetailsScreen = () => {
                             <Text style={{
                                 fontSize: 14,
                                 color: '#222',
-                            }} bold>فتره حجز خاصه</Text>
+                            }} bold>اسعار ايام العطلة</Text>
                             <View style={{
                                 flexDirection: 'row',
                                 justifyContent:'flex-start',
@@ -1049,30 +1106,46 @@ const HotelDetailsScreen = () => {
 
       </ScrollView>
         {/* Book Button */}
-        <View style={{
-            flexDirection: 'row',
-            gap: 16,
-            padding: 16,
-            borderTopWidth: 1,
-            borderColor: '#ccc',
-        }}>
-            <Pressable style={styles.bookButton} onPress={() => {
-                router.push({
-                    pathname: '/(tabs)/(user)/confirmPayment',
-                    params: {
-                        id: id,
-                    },
-                })
-            }}>
-            <Text style={styles.bookButtonText} bold>حجز الان!</Text>
-            </Pressable>
-            <Pressable style={[styles.bookButton, {
-                backgroundColor: '#FDEEFF',
-                borderColor: '#EE50FF',
-            }]}>
-            <Text style={[styles.bookButtonText, {color: '#EE50FF'}]} bold>تحدث مع المالك</Text>
-            </Pressable>
-        </View>
+        {
+            unit?.owner.id != user_id ? (
+                <View style={{
+                    flexDirection: 'row',
+                    gap: 16,
+                    padding: 16,
+                    borderTopWidth: 1,
+                    borderColor: '#ccc',
+                }}>
+                    <Pressable style={styles.bookButton} onPress={() => {
+                        router.push({
+                            pathname: '/(tabs)/(user)/confirmPayment',
+                            params: {
+                                id: id,
+                            },
+                        })
+                    }}>
+                    <Text style={styles.bookButtonText} bold>حجز الان!</Text>
+                    </Pressable>
+                    <Pressable style={[styles.bookButton, {
+                        backgroundColor: '#FDEEFF',
+                        borderColor: '#EE50FF',
+                    }]} onPress={() => {
+                        router.push({
+                        pathname: '/(tabs)/(owner)/chat',
+                        params: {
+                            id: 0,
+                            name: unit.owner.name,
+                            image: unit.owner.image,
+                            user_id: unit.owner.id,
+                        },
+                        })
+                    }}>
+                    <Text style={[styles.bookButtonText, {color: '#EE50FF'}]} bold>تحدث مع المالك</Text>
+                    </Pressable>
+                </View>
+            ) : (
+                <View></View>
+            )
+        }
 
     </SafeAreaView>
   );

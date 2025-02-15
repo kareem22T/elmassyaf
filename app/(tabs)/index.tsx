@@ -10,6 +10,12 @@ const Main = () => {
   const user_type = useSelector((state: RootState) => state.auth.user?.type);
   const {settings} = useSelector((state: RootState) => state)
 
+  console.log(settings);
+  
+
+  if (settings.isFirstTime == false)
+    return (<Redirect href='/(tabs)/(user)/home' />)
+
   return (<Redirect href="/(tabs)/(owner)/onBoarding" />)
 }
 

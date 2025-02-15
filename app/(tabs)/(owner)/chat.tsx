@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,6 +14,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Text from '@/components/Text';
 import { responsive } from '@/globals/globals';
+import { AppDispatch, RootState } from '@/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchChats, fetchMessages, markMessagesAsSeen, sendMessage } from '@/redux/chatSlice';
+import { useRoute } from '@react-navigation/native';
 
 interface Message {
   id: string;
@@ -24,45 +28,23 @@ interface Message {
 
 const ChatScreen: React.FC = () => {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '2',
-      text: 'صباح الخير',
-      isSender: true,
-      timestamp: new Date('2024-01-24T08:21:00'),
-    },
-    {
-      id: '3',
-      text: 'مرحبا 👋 متى تصل إلى مكاني',
-      isSender: false,
-      timestamp: new Date('2024-01-24T08:22:00'),
-    },
-    {
-      id: '4',
-      text: 'سأكون هناك في حدود الساعة 10:30 صباحاً... يرجى الاستعداد',
-      isSender: true,
-      timestamp: new Date('2024-01-24T08:23:00'),
-    },
-    {
-      id: '5',
-      text: 'حسنا. سأكون هناك في الوقت المحدد',
-      isSender: false,
-      timestamp: new Date('2024-01-24T08:24:00'),
-    },
-  ]);
+      const dispatch = useDispatch<AppDispatch>();
+      const messages = useSelector((state : RootState) => state.chat.messages)
+      const chats = useSelector((state : RootState) => state.chat.chats)
+      const current_user_id = useSelector((state : RootState) => state.auth.user?.id);
+      const {id, name, image, user_id} = useRoute().params
 
-    const handleSend = () => {
-        if (message.trim()) {
-        const newMessage: Message = {
-            id: Date.now().toString(),
-            text: message,
-            isSender: true,
-            timestamp: new Date(),
-        };
-        setMessages([...messages, newMessage]);
-        setMessage('');
-        }
-    };
+      const handleSend = () => {
+        dispatch(sendMessage({message: message, receiver_id: user_id}))
+        setMessage('')
+        dispatch(fetchMessages(chats.filter(chat => (chat.user1_id == current_user_id && chat.user2_id == user_id) || (chat.user1_id == user_id && chat.user2_id == current_user_id))[0]?.id))
+        dispatch(fetchChats())
+      };
+      
+      useEffect(() => {
+          dispatch(fetchMessages(chats.filter(chat => (chat.user1_id == current_user_id && chat.user2_id == user_id) || (chat.user1_id == user_id && chat.user2_id == current_user_id))[0]?.id))
+          dispatch(markMessagesAsSeen(chats.filter(chat => (chat.user1_id == current_user_id && chat.user2_id == user_id) || (chat.user1_id == user_id && chat.user2_id == current_user_id))[0]?.id))        
+      }, [])
 
     const { width, height } = useWindowDimensions()
     const getStyles = (width: number, height: number) =>
@@ -77,7 +59,7 @@ const ChatScreen: React.FC = () => {
             justifyContent: 'flex-start',
             alignItems: 'center',
             padding: 15,
-            paddingTop: 32,
+            paddingTop: 40,
             gap: 10,
             borderBottomWidth: 1,
             borderBottomColor: '#eee',
@@ -193,17 +175,16 @@ const ChatScreen: React.FC = () => {
         <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="chevron-forward" size={24} color="#000" />
             <Image
-            source={require('@/assets/images/man.jpg')}
+            source={image ? {uri: image} : require('@/assets/images/default-avatar-icon-of-social-media-user-vector.jpg')}
             style={styles.profileImage}
             />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName} bold>الاسم</Text>
-          <Text style={styles.headerStatus}>آخر ظهور من 12 دقيقيه</Text>
+          <Text style={styles.headerName} bold>{name}</Text>
         </View>
       </View>
 
-      <ScrollView style={styles.messagesContainer}>
+      <ScrollView style={styles.messagesContainer} contentContainerStyle={{paddingBottom: 40}}>
         <View style={styles.warningMessage}>
             <Text style={styles.warningText}>غير مسموح بإرسال أي طريقه تواصل أخري إلا عن طريق تطبيق المضيف</Text>
         </View>
@@ -212,7 +193,7 @@ const ChatScreen: React.FC = () => {
             key={msg.id}
             style={[
               styles.messageWrapper,
-              msg.isSender ? styles.senderWrapper : styles.receiverWrapper,
+              msg.sender_id == current_user_id ? styles.senderWrapper : styles.receiverWrapper,
             ]}
           >
 
@@ -220,22 +201,22 @@ const ChatScreen: React.FC = () => {
               <View
                 style={[
                   styles.messageBubble,
-                  msg.isSender ? styles.senderBubble : styles.receiverBubble,
+                  msg.sender_id == current_user_id ? styles.senderBubble : styles.receiverBubble,
                 ]}
               >
                 <Text
                   style={[
                     styles.messageText,
-                    msg.isSender ? styles.senderText : styles.receiverText,
+                    msg.sender_id == current_user_id ? styles.senderText : styles.receiverText,
                   ]}
                 >
-                  {msg.text}
+                  {msg.message}
                 </Text>
               </View>
             )}
-            {!msg.isSender && msg.id !== '1' && (
+            {msg.sender_id != current_user_id && msg.id !== '1' && (
               <Image
-                source={require('@/assets/images/man.jpg')}
+                source={image ? {uri: image} : require('@/assets/images/default-avatar-icon-of-social-media-user-vector.jpg')}
                 style={styles.messageAvatar}
               />
             )}

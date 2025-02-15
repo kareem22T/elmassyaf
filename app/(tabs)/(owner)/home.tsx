@@ -1,16 +1,69 @@
-import React from 'react';
-import { View, Image, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Image, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import Text from '@/components/Text';
-import { responsive } from '@/globals/globals';
+import { API_URL, responsive } from '@/globals/globals';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
+import axios from 'axios';
+import { api } from '@/API';
 
 export default function HomeScreen() {
-  const { width, height } = useWindowDimensions()
-  const units = useSelector((state: RootState) => state.units.units)
+  const { width, height } = useWindowDimensions();
+
+  const units = useSelector((state: RootState) => state.units.units);
+
+  const [pendingReservations, setPendingReservations] = useState([]);
+
+  const [widgetData, setWidgetData] = useState({ new_requests: 0, units_count: 0, total_profits: 0 });
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const [selectedReservation, setSelectedReservation] = useState(null);
+
+  const [actionType, setActionType] = useState('');
+
+
+  useEffect(() => {
+
+    fetchPendingReservations();
+
+    fetchWidgetData();
+
+  }, []);
+  const fetchWidgetData = async () => {
+
+    try {
+
+      const response = await api.get(API_URL + '/api/owner/home/widgets');
+
+      if (response.data.success) {
+
+        setWidgetData(response.data);
+
+      }
+
+    } catch (error) {
+
+      console.error('Error fetching widget data:', error);
+
+    }
+
+  };
+  const fetchPendingReservations = async () => {
+    try {
+      const response = await api.get(API_URL + '/api/owner/home/pending');
+      if (response.data.success) {
+        setPendingReservations(response.data.data.reservations);
+      }
+    } catch (error) {
+      console.error('Error fetching pending reservations:', error);
+    }
+  };
+
+
   const getStyles = (width: number, height: number) =>
     StyleSheet.create({
       container: {
@@ -40,7 +93,7 @@ export default function HomeScreen() {
         marginBottom: 4,
       },
       dateText: {
-        fontSize: 11,
+        fontSize: 9,
         color: '#4B4F5C',
         marginBottom: 4,
       },
@@ -166,6 +219,31 @@ export default function HomeScreen() {
         gap: 8,
         marginBottom: 4,
       },
+          modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      width: '80%',
+      backgroundColor: 'white',
+      borderRadius: 10,
+      padding: 20,
+      alignItems: 'center',
+    },
+    modalButton: {
+      marginTop: 10,
+      padding: 10,
+      borderRadius: 5,
+      backgroundColor: '#EE50FF',
+      flex: 1
+    },
+    modalButtonText: {
+      color: 'white',
+      fontSize: 16,
+      textAlign: 'center'
+    },
       price: {
         fontSize: 16,
         color: '#EE50FF',
@@ -224,6 +302,71 @@ export default function HomeScreen() {
 
   const styles = getStyles(width, height)
 
+    const handleAcceptReservation = async (reservationId) => {
+
+    setActionType('accept');
+
+    setSelectedReservation(reservationId);
+
+    setModalVisible(true);
+
+  };
+
+
+  const handleCancelReservation = async (reservationId) => {
+
+    setActionType('cancel');
+
+    setSelectedReservation(reservationId);
+
+    setModalVisible(true);
+
+  };
+
+
+  const confirmAction = async () => {
+
+    try {
+
+      const endpoint = actionType === 'accept' 
+
+        ? `/api/owner/reservations/${selectedReservation}/accept` 
+
+        : `/api/owner/reservations/${selectedReservation}/cancel`;
+
+      const response = await api.put(API_URL + endpoint);
+
+      if (response.data.success) {
+
+        fetchPendingReservations(); // Refresh the list after accepting or canceling
+
+      }
+
+    } catch (error) {
+
+      console.error(`Error ${actionType === 'accept' ? 'accepting' : 'canceling'} reservation:`, error);
+
+    } finally {
+
+      setModalVisible(false);
+
+      setSelectedReservation(null);
+
+      setActionType('');
+
+    }
+
+  };
+
+
+  const formatDate = (dateString) => {
+
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', locale: 'ar-SA' };
+
+    return new Date(dateString).toLocaleDateString('ar-SA', options);
+
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -236,10 +379,10 @@ export default function HomeScreen() {
         />
         <Text style={styles.headerTitle} bold>الرئيسية</Text>
         <TouchableOpacity onPress={() => {router.push('/(tabs)/(owner)/notifications')}}>
-        <Image 
-          source={require('@/assets/images/bell-notification.png')}
-          style={styles.logo}
-        />
+          <Image 
+            source={require('@/assets/images/bell-notification.png')}
+            style={styles.logo}
+          />
         </TouchableOpacity>
       </View> 
 
@@ -248,90 +391,131 @@ export default function HomeScreen() {
         <View style={styles.statCard}>
           <Image source={require('@/assets/images/new-requests.png')}  style={{height: responsive(width, 130, 140, 180), width: responsive(width, 130, 140, 180), resizeMode: 'contain'}}/>
           <View style={{position: 'absolute', bottom: 0, left: 0, justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 8}}>
-          <Text style={styles.statTitle}>طلبات جديده</Text>
-          <Text style={styles.statValue} bold>23</Text>
+            <Text style={styles.statTitle}>طلبات جديده</Text>
+            <Text style={styles.statValue} bold>{widgetData.new_requests}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => {router.push('/(tabs)/(owner)/units')}} style={styles.statCard}>
+        <TouchableOpacity onPress={() => {router.push('/(tabs)/(owner)/myUnits')}} style={styles.statCard}>
           <Image source={require('@/assets/images/units-no.png')}  style={{height: responsive(width, 130, 140, 180), width: responsive(width, 130, 140, 180), resizeMode: 'contain'}}/>
           <View style={{position: 'absolute', bottom: 0, left: 0, justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 8}}>
-          <Text style={[styles.statTitle, {color: '#3A3A3A'}]}>عدد الوحدات</Text>
-          <Text style={[styles.statValue, {color: '#3A3A3A'}]} bold>
-            {units.length}
-          </Text>
+            <Text style={[styles.statTitle, {color: '#3A3A3A'}]}>عدد الوحدات</Text>
+            <Text style={[styles.statValue, {color: '#3A3A3A'}]} bold>
+              {widgetData.units_count}
+            </Text>
           </View>
-
         </TouchableOpacity>
         <TouchableOpacity onPress={() => {router.push('/(tabs)/(owner)/statistics')}} style={styles.statCard}>
           <Image source={require('@/assets/images/finantials.png')}  style={{height: responsive(width, 130, 140, 180), width: responsive(width, 130, 140, 180), resizeMode: 'contain'}}/>
           <View style={{position: 'absolute', bottom: 0, left: 0, justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 8}}>
-          <Text style={[styles.statTitle, {color: '#3A3A3A'}]}>اجمالي الربح</Text>
-          <Text style={[styles.statValue, {color: '#3A3A3A', fontSize: 12}]} bold>12,670.90 EGP</Text>
+            <Text style={[styles.statTitle, {color: '#3A3A3A'}]}>اجمالي الربح</Text>
+            <Text style={[styles.statValue, {color: '#3A3A3A', fontSize: 12}]} bold>{widgetData.total_profits} EGP</Text>
           </View>
         </TouchableOpacity>
       </View>
 
-
       {/* Booking List */}
       <ScrollView>
-      {/* New Requests Button */}
-      <TouchableOpacity style={styles.requestsButton}>
-        <Image source={require('@/assets/images/menu-board.png')} style={{ width: responsive(width, 23, 24, 30), height: responsive(width, 23, 24, 30)  , resizeMode: 'contain'}}/>
-        <Text style={styles.requestsButtonText} medium>الطلبات جديده</Text>
-      </TouchableOpacity>
-      <View style={styles.cardWrapper}>
-        {[1, 2].map((item) => (
-          <View key={item} style={[styles.bookingCard, {width: '100%'}]}>
-            <View style={styles.bookingDetails}>
-              <Image
-                source={require('@/assets/images/home-img.jpeg')}
-                style={styles.propertyImage}
-              />
-              <View style={styles.bookingInfo}>
-                <View style={styles.row}>
-                <Text style={styles.propertyName} bold>اسم الكومبوند</Text>
-                <Text style={styles.price} medium>$150,7</Text>
-                </View>
-
-                <View style={styles.row}>
-                <Text style={styles.cityName}>اسم المدينه</Text>
-                <View style={styles.rating}>
-                  <Text>5.0</Text>
-                  <FontAwesome name='star' size={16} color="#FFD700" fill="#FFD700" />
-                </View>
-                </View>
-                <View style={styles.guestInfo}>
-                  <Text style={styles.capacityText}>2 فرد كبار</Text>
-                  <Text style={styles.capacityText}>3 فرد اطفال</Text>
-                </View>
-                <View style={styles.row}>
-                  <View style={{display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4}}>
-                    <Feather name='calendar' size={14} color="#4B4F5C" />
-                    <Text style={styles.capacityText}>
-                      حجز 3 أيام
-                    </Text>
+        {/* New Requests Button */}
+        <TouchableOpacity style={styles.requestsButton}>
+          <Image source={require('@/assets/images/menu-board.png')} style={{ width: responsive(width, 23, 24, 30), height: responsive(width, 23, 24, 30)  , resizeMode: 'contain'}}/>
+          <Text style={styles.requestsButtonText} medium>الطلبات جديده</Text>
+        </TouchableOpacity>
+        <View style={styles.cardWrapper}>
+          {pendingReservations.map((reservation) => (
+            <View key={reservation.id} style={[styles.bookingCard, {width: '100%'}]}>
+              <View style={styles.bookingDetails}>
+                <Image
+                  source={{ uri: reservation.unit.images[0].image }}
+                  style={styles.propertyImage}
+                />
+                <View style={styles.bookingInfo}>
+                  <View style={styles.row}>
+                    <Text style={styles.propertyName} bold>{reservation.unit.name}</Text>
+                    <Text style={styles.price} medium>{reservation.booking_price} EGP</Text>
                   </View>
-                  <Text style={styles.capacityText}>رقم الوحده: (45B)</Text>
-                </View>
-                <View style={styles.row}>
-                  <Text style={styles.dateText}>السبت 6 أبريل 2024</Text>
-                  <Text style={styles.dateText}>الاحد 6 أبريل 2024</Text>
+                  <View style={styles.guestInfo}>
+                    <Text style={styles.capacityText}>{reservation.adults_count} فرد كبار</Text>
+                    <Text style={styles.capacityText}>{reservation.children_count} فرد اطفال</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <View style={{display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                      <Feather name='calendar' size={14} color="#4B4F5C" />
+                      <Text style={styles.capacityText}>
+                        حجز {reservation.days_count} أيام
+                      </Text>
+                    </View>
+                    <Text style={styles.capacityText}>رقم الوحده: ({reservation.unit.unit_number})</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.dateText}>{formatDate(reservation.date_from)}</Text>
+                    <Text style={styles.dateText}>{formatDate(reservation.date_to)}</Text>
+                  </View>
                 </View>
               </View>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.acceptButton]}
+                  onPress={() => handleAcceptReservation(reservation.id)}
+                >
+                  <Text style={styles.acceptButtonText} medium>قبول</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.rejectButton]}
+                  onPress={() => handleCancelReservation(reservation.id)}
+                >
+                  <Text style={styles.rejectButtonText} medium>رفض</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={[styles.actionButton, styles.acceptButton]}>
-                <Text style={styles.acceptButtonText} medium>قبول</Text>
+          ))}
+        </View>
+      <Modal
+
+        transparent={true}
+
+        visible={modalVisible}
+
+        animationType="slide"
+
+      >
+
+        <View style={styles.modalContainer}>
+
+          <View style={styles.modalContent}>
+
+            <Text style={{ fontSize: 18, marginBottom: 20 }}>
+
+              {actionType === 'accept' ? 'هل أنت متأكد أنك تريد قبول هذا الحجز؟' : 'هل أنت متأكد أنك تريد رفض هذا الحجز؟'}
+
+            </Text>
+
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              gap: 16
+            }}>
+              <TouchableOpacity style={styles.modalButton} onPress={confirmAction}>
+
+                <Text style={styles.modalButtonText}>نعم</Text>
+
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionButton, styles.rejectButton]}>
-                <Text style={styles.rejectButtonText} medium>رفض</Text>
+
+              <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
+
+                <Text style={styles.modalButtonText}>لا</Text>
+
               </TouchableOpacity>
             </View>
+
           </View>
-        ))}
-      </View>
+
+        </View>
+
+      </Modal>
+
+
+
       </ScrollView>
     </SafeAreaView>
   );
 }
-

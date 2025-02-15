@@ -59,6 +59,8 @@ const Login = () => {
 
       if (response.data.success === true) {
         const { token, user } = response.data.data;
+        console.log(response.data.data);
+        
 
         dispatch(setCredentials({
           token,

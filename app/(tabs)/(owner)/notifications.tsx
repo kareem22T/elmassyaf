@@ -8,10 +8,20 @@ import Text from '@/components/Text';
 import { Feather } from '@expo/vector-icons';
 import { responsive } from '@/globals/globals';
 import { router } from 'expo-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/store';
+import { fetchNotifications, markAllAsRead } from '@/redux/notificationsSlice';
 
 
 export default function Notifications() {
     const { width, height } = useWindowDimensions()
+    const dispatch = useDispatch<AppDispatch>();
+    const { notifications } = useSelector((state : RootState) => state.notifications)
+
+    useEffect(() => {
+        dispatch(fetchNotifications())
+        dispatch((markAllAsRead()))
+    }, [dispatch])
     const getStyles = (width: number, height: number) =>
         StyleSheet.create({
           container: {
@@ -104,128 +114,38 @@ export default function Notifications() {
           <View style={{width: 32}}></View>
         </View>
         <ScrollView style={styles.content} contentContainerStyle={{paddingBottom: 16, alignItems: 'center', width: '100%'}}>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard, styles.notificationCardActive]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.notificationCard]}>
-            <View style={styles.notificationHeader}>
-              <Image source={require('@/assets/images/man.jpg')} style={styles.image}/>
-              <Text style={styles.notificationTitle} bold>عنوان الاشعار هنا</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
-              <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
-              <Text style={styles.notificationDetails}>
-                محتوي الاشعار هنا من وصف مكتوب يوضح الرساله بطريقه مختصرة
-              </Text>
-            </View>
-            <Text style={styles.notificationDate}>
-              الأربعاء الماضي الساعة 9:42 صباحًا
-            </Text>
-          </TouchableOpacity>
+          {
+            (notifications && notifications.length > 0 ) ? notifications.map(notification => (
+              <TouchableOpacity key={notification.id} style={[styles.notificationCard, !notification.read && styles.notificationCardActive]}>
+                <View style={styles.notificationHeader}>
+                  <Text style={styles.notificationTitle} bold>{notification.title}</Text>
+                </View>
+                <View style={{flexDirection: 'row', alignItems: 'center', marginHorizontal: responsive(width, 20, 20, 64)}}>
+                  <View style={{height: 30, width: 4, backgroundColor: '#EE50FF'}}></View>
+                  <Text style={styles.notificationDetails}>
+                    {notification.body}
+                  </Text>
+                </View>
+                <Text style={styles.notificationDate}>
+                      {new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long', year: 'numeric'}).format(new Date(notification.created_at || notification.updated_at)) + ' - '} 
+                      {new Intl.DateTimeFormat('ar-EG', { hour: '2-digit',  minute: '2-digit'}).format(new Date(notification.created_at || notification.updated_at))}
+                </Text>
+              </TouchableOpacity>
+            )) : (
+              <View style={{ width: '100%' }}>
+                  <Text style={{
+                      textAlign: 'center',
+                      fontSize: 22,
+                      paddingVertical: 24,
+                      width: '100%',
+                  }} bold>لا توجد اشعارات</Text>
+              </View>
+
+            )
+          }
         </ScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
+

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Masyaf",
     "slug": "masyaf",
-    "version": "1.0.3",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -14,14 +14,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
-        "googleServicesFile": "./google-services.json"
+        "backgroundColor": "#ffffff"
       },
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAkjJFp9iih_AByTiGWZxQ_imBv2Ep-8Ec"
         }
       },
+      "googleServicesFile": "./google-services.json",
       "package": "com.kareem11.masyaf"
     },
     "web": {
@@ -31,13 +31,6 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-video",
-        {
-          "supportsBackgroundPlayback": true,
-          "supportsPictureInPicture": true
-        }
-      ],
       [
         "expo-build-properties",
         {
@@ -66,9 +59,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "078d3f38-043d-4e71-933b-9a860208bade"
+        "projectId": "adf618f7-f109-44f0-8151-b59532bbe5f4"
       }
     },
-    "owner": "kareem11"
+    "owner": "nibtun"
   }
 }

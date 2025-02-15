@@ -24,7 +24,7 @@ const OwnerTaskBar = () => {
             <Image source={isActive('/chats') ? require('@/assets/images/chat-icon-active.png') : require('@/assets/images/chat-icon.png')} style={{ alignSelf: 'center', width: 32, height: 30 }} />
             <Text style={isActive('/chats') ? styles.navTextActive : styles.navText} bold>المحادثات</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/(owner)/more')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/more')}>
             <Image source={isActive('/more') ? require('@/assets/images/more-icon-active.png') : require('@/assets/images/more-icon.png')} style={{ alignSelf: 'center', width: 32, height: 30 }} />
             <Text style={isActive('/more') ? styles.navTextActive : styles.navText} bold>المزيد</Text>
         </TouchableOpacity>
